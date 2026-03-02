@@ -36,9 +36,13 @@
         margin: 0 auto;
         padding: 1.25rem;
         display: grid;
-        grid-template-columns: 1.4fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 1rem;
         align-items: start;
+      }
+
+      .app > * {
+        min-width: 0;
       }
 
       .panel {
@@ -84,39 +88,19 @@
         border-color: #b8c0c4;
       }
 
-      .editor-with-lines {
-        position: relative;
+      .code-editor-host {
+        min-height: 260px;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        overflow: hidden;
       }
 
-      .editor-line-numbers {
-        position: absolute;
-        top: 1px;
-        bottom: auto;
-        left: 1px;
-        width: 2.6rem;
-        padding: 0.8rem 0.4rem 0.8rem 0.2rem;
-        border-right: 1px solid #d7ddd0;
-        background: #eff2ea;
-        color: #7c8770;
+      .code-editor-host .CodeMirror {
+        min-height: 260px;
+        height: 260px;
         font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
         font-size: 15px;
         line-height: 22px;
-        font-variant-numeric: tabular-nums;
-        text-align: right;
-        white-space: pre;
-        overflow: auto;
-        scrollbar-width: none;
-        user-select: none;
-        pointer-events: none;
-        border-radius: 9px 0 0 9px;
-      }
-
-      .editor-line-numbers::-webkit-scrollbar {
-        display: none;
-      }
-
-      .code-editor {
-        padding-left: 3.2rem;
       }
 
       .controls {
@@ -290,6 +274,80 @@
         margin-top: 0.65rem;
         color: var(--muted);
         font-size: 0.9rem;
+      }
+
+      .code-info-tooltip {
+        position: fixed;
+        z-index: 9999;
+        width: min(360px, calc(100vw - 24px));
+        max-height: min(320px, calc(100vh - 24px));
+        overflow: auto;
+        border: 1px solid #c8d4dd;
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: 0 16px 36px rgba(17, 24, 39, 0.18);
+        padding: 0.62rem 0.68rem;
+        color: #1f2931;
+      }
+
+      .code-info-tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .code-info-tooltip-title {
+        margin: 0;
+        font-size: 0.88rem;
+        color: #1f3643;
+        word-break: break-word;
+      }
+
+      .code-info-tooltip-close {
+        border: 1px solid #ccd8e0;
+        background: #f3f6f8;
+        color: #2a3944;
+        padding: 0.12rem 0.44rem;
+        font-size: 0.75rem;
+        line-height: 1.2;
+      }
+
+      .code-info-tooltip-meta {
+        margin: 0.34rem 0 0.4rem;
+        font-size: 0.75rem;
+        color: #63727d;
+      }
+
+      .code-info-tooltip-body {
+        margin: 0;
+        font-size: 0.79rem;
+        line-height: 1.4;
+        color: #24323d;
+      }
+
+      .code-info-tooltip-body code {
+        background: #edf3f8;
+        border-radius: 4px;
+        padding: 0.04rem 0.24rem;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.75rem;
+      }
+
+      .code-info-tooltip-body a {
+        color: #0f5b87;
+      }
+
+      .edu-links {
+        margin: 0.45rem 0 0;
+        padding-left: 1rem;
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .edu-links a {
+        color: #0f5b87;
+        font-size: 0.78rem;
       }
 
       .stack {
@@ -728,15 +786,15 @@
             Run (Shift + Enter)
           </button>
           <button id="runAllBtn" class="neutral">Run All Code</button>
+          <button id="toggleHelpBtn" class="neutral" type="button" aria-pressed="true">
+            Toggle Help: On
+          </button>
           <button id="saveCodeBtn" class="neutral">Save Code</button>
         </div>
 
         <div class="workspace-stack">
           <section id="editorPane" class="workspace-pane workspace-pane-active">
-            <div class="editor-with-lines">
-              <div id="editorLineNumbers" class="editor-line-numbers" aria-hidden="true">1</div>
-              <textarea id="codeInput" class="editor code-editor" spellcheck="false" wrap="off"></textarea>
-            </div>
+            <div id="codeInput" class="code-editor-host" aria-label="Code Editor"></div>
           </section>
 
           <section id="stepPane" class="workspace-pane">
@@ -846,10 +904,34 @@
     </main>
 
     <script>
+      window.__netitorLoader = (async () => {
+        const netitorRawUrl =
+          "https://raw.githubusercontent.com/netizenorg/netitor/df180af8a9784afe99e9f715016337ab825c2b26/build/netitor.min.js";
+        const response = await fetch(netitorRawUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to load Netitor: ${response.status}`);
+        }
+        const sourceCode = await response.text();
+        // Execute library in global scope so Netitor constructor is available.
+        (0, eval)(`${sourceCode}\n//# sourceURL=${netitorRawUrl}`);
+        if (typeof Netitor === "undefined") {
+          throw new Error("Netitor did not initialize after loading source.");
+        }
+      })();
+    </script>
+    <script>
+      (async () => {
+        try {
+          await window.__netitorLoader;
+        } catch (error) {
+          console.error(error);
+          return;
+        }
+
       const codeInput = document.getElementById("codeInput");
-      const editorLineNumbersEl = document.getElementById("editorLineNumbers");
       const editorPane = document.getElementById("editorPane");
       const stepPane = document.getElementById("stepPane");
+      const toggleHelpBtn = document.getElementById("toggleHelpBtn");
       const runStepBtn = document.getElementById("runStepBtn");
       const runAllBtn = document.getElementById("runAllBtn");
       const saveCodeBtn = document.getElementById("saveCodeBtn");
@@ -873,6 +955,10 @@
       const promiseStates = new Map();
       let promiseTokenCounter = 0;
       let hoveredDomPath = null;
+      let netitor = null;
+      let codeInfoTooltipEl = null;
+      let removeCodeInfoTooltipListeners = null;
+      let helpTooltipsEnabled = true;
       const runtimeConsoleMarker = Symbol("runtimeConsoleMarker");
       const builtinLibraryCatalog = [
         {
@@ -1037,6 +1123,404 @@ barOmf.style.padding = "2px 4px"`,
         active: false,
         errorIndex: -1,
       };
+
+      function toTextFromField(field) {
+        if (!field) {
+          return "";
+        }
+
+        if (typeof field === "string") {
+          return field.trim();
+        }
+
+        if (typeof field.text === "string") {
+          return field.text.trim();
+        }
+
+        if (typeof field.html === "string") {
+          const probe = document.createElement("div");
+          probe.innerHTML = field.html;
+          return (probe.textContent || "").replace(/\s+/g, " ").trim();
+        }
+
+        return "";
+      }
+
+      function escapeHtml(value) {
+        if (typeof value !== "string") {
+          return "";
+        }
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function sanitizeTooltipHtml(rawHtml) {
+        if (typeof rawHtml !== "string" || !rawHtml.trim()) {
+          return "";
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = rawHtml;
+
+        template.content
+          .querySelectorAll(
+            "script,style,iframe,object,embed,link,meta,base,form,input,button,textarea,select,option",
+          )
+          .forEach((el) => el.remove());
+
+        template.content.querySelectorAll("*").forEach((el) => {
+          [...el.attributes].forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            const value = String(attr.value || "");
+
+            if (name.startsWith("on") || name === "style") {
+              el.removeAttribute(attr.name);
+              return;
+            }
+
+            if ((name === "href" || name === "src") && /^\s*javascript:/i.test(value)) {
+              el.removeAttribute(attr.name);
+            }
+          });
+
+          if (el.tagName === "A") {
+            const href = el.getAttribute("href");
+            if (!href || !/^https?:\/\//i.test(href)) {
+              el.removeAttribute("href");
+            } else {
+              el.setAttribute("target", "_blank");
+              el.setAttribute("rel", "noopener noreferrer");
+            }
+          }
+        });
+
+        return template.innerHTML.trim();
+      }
+
+      function decodeHtmlEntities(value) {
+        if (typeof value !== "string" || !value) {
+          return "";
+        }
+        const textarea = document.createElement("textarea");
+        textarea.innerHTML = value;
+        return textarea.value;
+      }
+
+      function formatTooltipRichText(value) {
+        if (typeof value !== "string") {
+          return "";
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return "";
+        }
+
+        if (/<\/?[a-z][\s\S]*>/i.test(trimmed)) {
+          return sanitizeTooltipHtml(trimmed);
+        }
+
+        const decoded = decodeHtmlEntities(trimmed).trim();
+        if (decoded !== trimmed && /<\/?[a-z][\s\S]*>/i.test(decoded)) {
+          return sanitizeTooltipHtml(decoded);
+        }
+
+        return escapeHtml(trimmed);
+      }
+
+      function toHtmlFromField(field) {
+        if (!field) {
+          return "";
+        }
+
+        if (typeof field === "string") {
+          return formatTooltipRichText(field);
+        }
+
+        if (typeof field.html === "string" && field.html.trim()) {
+          return formatTooltipRichText(field.html);
+        }
+
+        if (typeof field.text === "string" && field.text.trim()) {
+          return formatTooltipRichText(field.text);
+        }
+
+        return "";
+      }
+
+      function extractEduUrls(nfo) {
+        const urls = [];
+        const addUrl = (candidate) => {
+          if (
+            typeof candidate === "string" &&
+            /^https?:\/\//.test(candidate) &&
+            !urls.includes(candidate)
+          ) {
+            urls.push(candidate);
+          }
+        };
+
+        addUrl(nfo?.url);
+        if (Array.isArray(nfo?.urls)) {
+          nfo.urls.forEach(addUrl);
+        }
+
+        return urls;
+      }
+
+      function isIdentifierToken(value) {
+        return typeof value === "string" && /^[A-Za-z_$][\w$]*$/.test(value);
+      }
+
+      function hasVariableDeclaration(token) {
+        if (!isIdentifierToken(token)) {
+          return false;
+        }
+        const source = getEditorCode();
+        const declarationPattern = new RegExp(`\\b(?:let|const|var)\\s+${token}\\b`);
+        return declarationPattern.test(source);
+      }
+
+      function getVariableHelpText(token) {
+        return `${token} is a variable. When you want your program to remember a value, we store that value in a variable, a name we give to a slot in memory where your computer stores that value. Variables can hold different kinds of values, which we call their "data type".`;
+      }
+
+      function getTokenFromPointerEvent(nativeEvent) {
+        const cm = netitor?.cm;
+        if (
+          !cm ||
+          !nativeEvent ||
+          !Number.isFinite(nativeEvent.clientX) ||
+          !Number.isFinite(nativeEvent.clientY)
+        ) {
+          return "";
+        }
+
+        try {
+          const pos = cm.coordsChar({ left: nativeEvent.clientX, top: nativeEvent.clientY }, "window");
+          const tokenAtPos = cm.getTokenAt(pos);
+          return typeof tokenAtPos?.string === "string" ? tokenAtPos.string.trim() : "";
+        } catch {
+          return "";
+        }
+      }
+
+      function updateHelpToggleButton() {
+        if (!toggleHelpBtn) {
+          return;
+        }
+        toggleHelpBtn.textContent = `Toggle Help: ${helpTooltipsEnabled ? "On" : "Off"}`;
+        toggleHelpBtn.setAttribute("aria-pressed", helpTooltipsEnabled ? "true" : "false");
+      }
+
+      function dismissCodeInfoTooltip() {
+        if (typeof removeCodeInfoTooltipListeners === "function") {
+          removeCodeInfoTooltipListeners();
+          removeCodeInfoTooltipListeners = null;
+        }
+        if (codeInfoTooltipEl && codeInfoTooltipEl.parentElement) {
+          codeInfoTooltipEl.parentElement.removeChild(codeInfoTooltipEl);
+        }
+        codeInfoTooltipEl = null;
+      }
+
+      function positionCodeInfoTooltip(tooltipEl, nativeEvent) {
+        const hostRect = codeInput.getBoundingClientRect();
+        const padding = 10;
+        let left = hostRect.left + 18;
+        let top = hostRect.top + 18;
+
+        if (
+          nativeEvent &&
+          Number.isFinite(nativeEvent.clientX) &&
+          Number.isFinite(nativeEvent.clientY)
+        ) {
+          left = nativeEvent.clientX + 14;
+          top = nativeEvent.clientY + 14;
+        }
+
+        tooltipEl.style.left = `${Math.max(padding, left)}px`;
+        tooltipEl.style.top = `${Math.max(padding, top)}px`;
+
+        const tooltipRect = tooltipEl.getBoundingClientRect();
+        if (tooltipRect.right > window.innerWidth - padding) {
+          left = Math.max(padding, window.innerWidth - tooltipRect.width - padding);
+        }
+        if (tooltipRect.bottom > window.innerHeight - padding) {
+          top = Math.max(padding, top - tooltipRect.height - 24);
+        }
+
+        tooltipEl.style.left = `${Math.max(padding, left)}px`;
+        tooltipEl.style.top = `${Math.max(padding, top)}px`;
+      }
+
+      function showCodeInfoTooltip(info, nativeEvent) {
+        if (!helpTooltipsEnabled) {
+          dismissCodeInfoTooltip();
+          return;
+        }
+
+        if (!info || typeof info !== "object") {
+          dismissCodeInfoTooltip();
+          return;
+        }
+
+        dismissCodeInfoTooltip();
+
+        const infoToken = typeof info.data === "string" ? info.data.trim() : "";
+        const pointerToken = getTokenFromPointerEvent(nativeEvent);
+        const token = pointerToken || infoToken;
+        const hasNfo = Boolean(info?.nfo && typeof info.nfo === "object");
+        if (!token) {
+          return;
+        }
+
+        const language = typeof info.language === "string" && info.language ? info.language : "code";
+        const lineLabel = Number.isFinite(info.line) ? `Line ${info.line}` : "Line ?";
+        let descriptionHtml = hasNfo ? toHtmlFromField(info.nfo.description) : "";
+        const appliesTo = hasNfo ? toTextFromField(info.nfo.elements) : "";
+        const urls = hasNfo ? extractEduUrls(info.nfo) : [];
+
+        if (!descriptionHtml && hasVariableDeclaration(token)) {
+          descriptionHtml = escapeHtml(getVariableHelpText(token));
+        }
+
+        if (!descriptionHtml && !hasNfo) {
+          return;
+        }
+
+        const tooltip = document.createElement("aside");
+        tooltip.className = "code-info-tooltip";
+        tooltip.setAttribute("role", "dialog");
+        tooltip.setAttribute("aria-label", "Code Info");
+
+        const header = document.createElement("div");
+        header.className = "code-info-tooltip-header";
+
+        const titleEl = document.createElement("p");
+        titleEl.className = "code-info-tooltip-title";
+        titleEl.textContent = token;
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "code-info-tooltip-close";
+        closeBtn.textContent = "Close";
+        closeBtn.addEventListener("click", () => {
+          dismissCodeInfoTooltip();
+        });
+
+        header.appendChild(titleEl);
+        header.appendChild(closeBtn);
+        tooltip.appendChild(header);
+
+        const meta = document.createElement("p");
+        meta.className = "code-info-tooltip-meta";
+        meta.textContent = `${language} • ${lineLabel}`;
+        tooltip.appendChild(meta);
+
+        const body = document.createElement("div");
+        body.className = "code-info-tooltip-body";
+        body.innerHTML = descriptionHtml;
+        tooltip.appendChild(body);
+
+        if (appliesTo) {
+          const appliesMeta = document.createElement("p");
+          appliesMeta.className = "code-info-tooltip-meta";
+          appliesMeta.textContent = `Applies to: ${appliesTo}`;
+          tooltip.appendChild(appliesMeta);
+        }
+
+        if (urls.length > 0) {
+          const links = document.createElement("ul");
+          links.className = "edu-links";
+          urls.slice(0, 3).forEach((url) => {
+            const item = document.createElement("li");
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.target = "_blank";
+            anchor.rel = "noopener noreferrer";
+            anchor.textContent = url;
+            item.appendChild(anchor);
+            links.appendChild(item);
+          });
+          tooltip.appendChild(links);
+        }
+
+        document.body.appendChild(tooltip);
+        codeInfoTooltipEl = tooltip;
+        positionCodeInfoTooltip(tooltip, nativeEvent);
+
+        const handlePointerDown = (event) => {
+          if (!codeInfoTooltipEl) {
+            return;
+          }
+          if (!codeInfoTooltipEl.contains(event.target)) {
+            dismissCodeInfoTooltip();
+          }
+        };
+        const handleEscape = (event) => {
+          if (event.key === "Escape") {
+            dismissCodeInfoTooltip();
+          }
+        };
+
+        document.addEventListener("pointerdown", handlePointerDown, true);
+        document.addEventListener("keydown", handleEscape);
+        removeCodeInfoTooltipListeners = () => {
+          document.removeEventListener("pointerdown", handlePointerDown, true);
+          document.removeEventListener("keydown", handleEscape);
+        };
+      }
+
+      function forceHintMenu() {
+        const cm = netitor?.cm;
+        if (!cm || typeof cm.showHint !== "function") {
+          return;
+        }
+        cm.focus();
+        if (!cm.state.completionActive) {
+          cm.showHint();
+        }
+      }
+
+      function initializeEditor() {
+        netitor = new Netitor({
+          ele: "#codeInput",
+          language: "javascript",
+          theme: "light",
+          lint: false,
+          hint: true,
+          wrap: false,
+          code: "",
+        });
+
+        netitor.on("code-update", () => {
+          resetStepRunnerFromEditor();
+        });
+
+        netitor.on("edu-info", (info, eventObj) => {
+          showCodeInfoTooltip(info, eventObj);
+        });
+      }
+
+      function getEditorCode() {
+        return String(netitor?.code || "");
+      }
+
+      function setEditorCode(sourceCode) {
+        if (!netitor) {
+          return;
+        }
+        netitor.code = String(sourceCode || "");
+      }
+
+      function focusEditor() {
+        codeInput.querySelector(".CodeMirror textarea")?.focus();
+      }
+
       let isExecuting = false;
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
       const executeInScope = new AsyncFunction(
@@ -1781,37 +2265,13 @@ barOmf.style.padding = "2px 4px"`,
         }
       }
 
-      function syncEditorLineNumberScroll() {
-        if (!editorLineNumbersEl) {
-          return;
-        }
-
-        // Keep the gutter viewport identical to the textarea viewport.
-        editorLineNumbersEl.style.top = `${codeInput.clientTop}px`;
-        editorLineNumbersEl.style.height = `${codeInput.clientHeight}px`;
-        editorLineNumbersEl.scrollTop = codeInput.scrollTop;
-      }
-
-      function renderEditorLineNumbers() {
-        if (!editorLineNumbersEl) {
-          return;
-        }
-
-        const lineCount = Math.max(1, codeInput.value.split("\n").length);
-        const lines = Array.from({ length: lineCount }, (_, idx) => String(idx + 1)).join(
-          "\n"
-        );
-        editorLineNumbersEl.textContent = lines;
-        syncEditorLineNumberScroll();
-      }
-
       function resetStepRunnerFromEditor() {
-        stepState.source = codeInput.value;
+        dismissCodeInfoTooltip();
+        stepState.source = getEditorCode();
         stepState.lines = buildLines(stepState.source);
         stepState.index = 0;
         stepState.active = false;
         stepState.errorIndex = -1;
-        renderEditorLineNumbers();
         renderStepRunner();
         setWorkspaceMode("editor");
       }
@@ -1853,8 +2313,10 @@ barOmf.style.padding = "2px 4px"`,
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Saved JavaScript Page</title>
   </head>
-  <body>
-    ${initialContainerOuterHtml}
+  <body style="margin: 0; background: #11171f;">
+    <div style="min-height: 100vh; padding: 0.7rem; box-sizing: border-box;">
+      ${initialContainerOuterHtml}
+    </div>
     <script type="module">
 ${safeCode}
     <\/script>
@@ -1864,7 +2326,7 @@ ${safeCode}
       }
 
       function saveCodeAsHtml() {
-        const sourceCode = codeInput.value;
+        const sourceCode = getEditorCode();
         const htmlDocument = buildSavedHtmlDocument(sourceCode);
         const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
         const downloadUrl = URL.createObjectURL(blob);
@@ -2249,7 +2711,7 @@ ${safeCode}
           return;
         }
 
-        const source = codeInput.value;
+        const source = getEditorCode();
         clearRuntimeState();
 
         stepState.source = source;
@@ -2278,7 +2740,7 @@ ${safeCode}
       }
 
       function startStepSession() {
-        stepState.source = codeInput.value;
+        stepState.source = getEditorCode();
         stepState.lines = buildLines(stepState.source);
         stepState.index = 0;
         stepState.active = true;
@@ -2292,7 +2754,7 @@ ${safeCode}
           return;
         }
 
-        const codeChanged = stepState.source !== codeInput.value;
+        const codeChanged = stepState.source !== getEditorCode();
         const needsNewSession =
           !stepState.active ||
           codeChanged ||
@@ -2357,6 +2819,13 @@ ${safeCode}
       domViewBtn.addEventListener("click", () => {
         setOutputView("dom");
       });
+      toggleHelpBtn?.addEventListener("click", () => {
+        helpTooltipsEnabled = !helpTooltipsEnabled;
+        if (!helpTooltipsEnabled) {
+          dismissCodeInfoTooltip();
+        }
+        updateHelpToggleButton();
+      });
 
       loadExampleButtons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -2366,13 +2835,19 @@ ${safeCode}
             return;
           }
 
-          codeInput.value = examples[exampleId];
+          setEditorCode(examples[exampleId]);
           resetStepRunnerFromEditor();
-          codeInput.focus();
+          focusEditor();
         });
       });
 
       document.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.code === "Space") {
+          event.preventDefault();
+          forceHintMenu();
+          return;
+        }
+
         if (event.key === "Enter" && event.shiftKey) {
           if (event.defaultPrevented) {
             return;
@@ -2382,20 +2857,13 @@ ${safeCode}
         }
       });
 
-      codeInput.addEventListener("input", resetStepRunnerFromEditor);
-      codeInput.addEventListener("scroll", syncEditorLineNumberScroll);
-      window.addEventListener("resize", renderEditorLineNumbers);
-      if (typeof ResizeObserver !== "undefined") {
-        const editorResizeObserver = new ResizeObserver(() => {
-          renderEditorLineNumbers();
-        });
-        editorResizeObserver.observe(codeInput);
-      }
-
+      initializeEditor();
+      updateHelpToggleButton();
       resetStepRunnerFromEditor();
       setOutputView("console");
       renderVariables();
       renderDomVisualizer();
+      })();
     </script>
   </body>
 </html>
