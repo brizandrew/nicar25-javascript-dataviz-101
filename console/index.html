@@ -1,0 +1,2401 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JavaScript Learning Console</title>
+    <style>
+      :root {
+        --bg: #f7f7f2;
+        --panel: #ffffff;
+        --panel-border: #d8d8ce;
+        --text: #1e1e1e;
+        --muted: #5f5f55;
+        --primary: #006d77;
+        --primary-dark: #005962;
+        --accent: #ffb703;
+        --error: #b42318;
+        --success: #0f766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 10% 10%, #fff6dc 0%, #f7f7f2 45%),
+          radial-gradient(circle at 90% 90%, #dcf3ff 0%, #f7f7f2 40%);
+        color: var(--text);
+      }
+
+      .app {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 1.25rem;
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 8px 24px rgba(17, 17, 17, 0.06);
+      }
+
+      h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.25rem;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .subtitle {
+        margin: 0 0 0.75rem;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .editor {
+        min-height: 260px;
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 15px;
+        line-height: 22px;
+        resize: vertical;
+        overflow: auto;
+        white-space: pre;
+      }
+
+      .editor:focus {
+        outline: none;
+        border-color: #b8c0c4;
+      }
+
+      .editor-with-lines {
+        position: relative;
+      }
+
+      .editor-line-numbers {
+        position: absolute;
+        top: 1px;
+        bottom: auto;
+        left: 1px;
+        width: 2.6rem;
+        padding: 0.8rem 0.4rem 0.8rem 0.2rem;
+        border-right: 1px solid #d7ddd0;
+        background: #eff2ea;
+        color: #7c8770;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 15px;
+        line-height: 22px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        white-space: pre;
+        overflow: auto;
+        scrollbar-width: none;
+        user-select: none;
+        pointer-events: none;
+        border-radius: 9px 0 0 9px;
+      }
+
+      .editor-line-numbers::-webkit-scrollbar {
+        display: none;
+      }
+
+      .code-editor {
+        padding-left: 3.2rem;
+      }
+
+      .controls {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .workspace-stack {
+        position: relative;
+        margin-top: 0.75rem;
+      }
+
+      .workspace-pane {
+        display: none;
+      }
+
+      .workspace-pane.workspace-pane-active {
+        display: block;
+      }
+
+      .step-lines {
+        max-height: 260px;
+        overflow: auto;
+        white-space: normal;
+        display: grid;
+        align-content: start;
+        padding: 0;
+      }
+
+      .step-line {
+        display: grid;
+        grid-template-columns: 1.2rem 2rem 1fr;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.28rem 0.5rem;
+        border-bottom: 1px solid #eef2ea;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+      }
+
+      .step-line:last-child {
+        border-bottom: none;
+      }
+
+      .step-line.done {
+        background: #f2faf1;
+      }
+
+      .step-line.current {
+        background: #fff3cf;
+      }
+
+      .step-line.error {
+        background: #ffe3de;
+      }
+
+      .step-marker {
+        color: #47606f;
+        font-weight: 700;
+      }
+
+      .step-line.current .step-marker {
+        color: #9a6200;
+      }
+
+      .step-line.done .step-marker {
+        color: #2f7d32;
+      }
+
+      .step-line.error .step-marker {
+        color: #b42318;
+      }
+
+      .step-number {
+        color: #60757f;
+      }
+
+      .step-code {
+        color: #22323a;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .step-code.blank {
+        color: #98a4aa;
+        font-style: italic;
+      }
+
+      .examples-accordion {
+        margin-top: 0.75rem;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: #fdfdfa;
+      }
+
+      .examples-summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 0.6rem 0.75rem;
+        font-weight: 700;
+        color: #2d3d4a;
+      }
+
+      .examples-summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .examples-summary::after {
+        content: "+";
+        float: right;
+        color: #4d6677;
+      }
+
+      .examples-accordion[open] .examples-summary::after {
+        content: "-";
+      }
+
+      .examples-content {
+        border-top: 1px solid #e0e4dd;
+        padding: 0.65rem 0.75rem 0.75rem;
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .example-card {
+        border: 1px solid #ccd7de;
+        border-radius: 8px;
+        background: #f3f9fc;
+        padding: 0.6rem;
+      }
+
+      .example-name {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .example-description {
+        margin: 0.35rem 0 0.55rem;
+        font-size: 0.87rem;
+        color: #445564;
+        line-height: 1.35;
+      }
+
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .run {
+        background: var(--primary);
+        color: white;
+      }
+
+      .run:hover {
+        background: var(--primary-dark);
+      }
+
+      .neutral {
+        background: #ecece6;
+        color: #2a2a22;
+      }
+
+      .tip {
+        margin-top: 0.65rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .stack {
+        display: grid;
+        gap: 1rem;
+        align-content: start;
+      }
+
+      .output-header {
+        margin-bottom: 0.15rem;
+      }
+
+      .output-controls {
+        margin-top: 0.65rem;
+      }
+
+      .output-toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .output-toggle-btn {
+        padding: 0.35rem 0.55rem;
+        border: 1px solid #cfd5d8;
+        border-radius: 8px;
+        background: #f2f4f5;
+        color: #2a3135;
+        font-size: 0.78rem;
+      }
+
+      .output-toggle-btn.output-toggle-active {
+        background: #1f2f3a;
+        border-color: #1f2f3a;
+        color: #ffffff;
+      }
+
+      .output-pane {
+        display: none;
+      }
+
+      .output-pane.output-pane-active {
+        display: block;
+      }
+
+      .console-output {
+        margin-top: 0.75rem;
+        height: 230px;
+        overflow: auto;
+        background: #11171f;
+        color: #e7ecf2;
+        border-radius: 10px;
+        padding: 0.7rem;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.87rem;
+      }
+
+      .dom-visual-output {
+        line-height: 1.35;
+      }
+
+      .dom-tree {
+        display: grid;
+        gap: 0.12rem;
+      }
+
+      .dom-node {
+        border-radius: 6px;
+        color: #c9d3de;
+        padding: 0.16rem 0.35rem;
+        user-select: none;
+      }
+
+      .dom-node.hover-linked {
+        background: #ffefbf;
+        color: #24201a;
+      }
+
+      .line {
+        margin-bottom: 0.35rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .line:last-child {
+        margin-bottom: 0;
+      }
+
+      .line.error {
+        color: #ffb4ab;
+      }
+
+      .line.result {
+        color: #86efac;
+      }
+
+      .line.warn {
+        color: #ffe082;
+      }
+
+      .vars-grid {
+        margin-top: 0.75rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 0.55rem;
+      }
+
+      .var-card {
+        border: 1px solid #cad6dc;
+        border-radius: 10px;
+        padding: 0.55rem;
+        background: #f5fafc;
+      }
+
+      .var-card.linked-element {
+        cursor: pointer;
+      }
+
+      .var-card.hover-linked {
+        border-color: #ffb703;
+        background: #fff5dd;
+      }
+
+      .var-card.changed {
+        animation: pulse 0.75s ease;
+        border-color: var(--accent);
+        background: #fff4d2;
+      }
+
+      .var-name {
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+      }
+
+      .var-meta {
+        margin-bottom: 0.35rem;
+        font-size: 0.74rem;
+        color: #4b5a66;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .var-value {
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.86rem;
+        color: #223341;
+        word-break: break-word;
+      }
+
+      .var-card.promise {
+        border-color: #b8c2df;
+        background: #f4f6ff;
+      }
+
+      .var-card.response {
+        border-color: #b9d6c8;
+        background: #eef8f1;
+      }
+
+      .var-card.element {
+        border-color: #cbb9df;
+        background: #f6f0fc;
+      }
+
+      .var-card.builtin {
+        border-color: #c6d9b6;
+        background: #f2f9ec;
+      }
+
+      .promise-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        gap: 0.28rem;
+      }
+
+      .promise-status {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.12rem 0.38rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .promise-status.pending {
+        background: #fff3cd;
+        color: #8a6400;
+      }
+
+      .promise-status.fulfilled {
+        background: #dff5df;
+        color: #1d6e1f;
+      }
+
+      .promise-status.rejected {
+        background: #ffdedd;
+        color: #a01f1f;
+      }
+
+      .response-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        gap: 0.28rem;
+      }
+
+      .response-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+
+      .response-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.12rem 0.36rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: #d8e9de;
+        color: #1d5a35;
+      }
+
+      .response-badge.not-ok {
+        background: #ffe5e5;
+        color: #942323;
+      }
+
+      .response-detail {
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+        color: #2a4e38;
+        word-break: break-word;
+      }
+
+      .builtin-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        gap: 0.28rem;
+      }
+
+      .builtin-detail {
+        font-size: 0.78rem;
+        color: #315723;
+      }
+
+      .builtin-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+
+      .builtin-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.12rem 0.36rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: #dfecd4;
+        color: #2e5a1f;
+      }
+
+      .dom-hover-outline {
+        outline: 2px solid #ffb703;
+        outline-offset: 2px;
+      }
+
+      .element-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        gap: 0.28rem;
+      }
+
+      .element-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+
+      .element-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.12rem 0.36rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: #e5daf3;
+        color: #55317b;
+      }
+
+      .element-detail {
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+        color: #4d3670;
+        word-break: break-word;
+      }
+
+      .element-section-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #5e4382;
+        text-transform: uppercase;
+      }
+
+      .element-list {
+        margin: 0;
+        padding-left: 1rem;
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .element-list-item {
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.76rem;
+        color: #4d3670;
+        word-break: break-word;
+      }
+
+      .array-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+        gap: 0.35rem;
+        max-height: 200px;
+        overflow: auto;
+      }
+
+      .array-cell {
+        aspect-ratio: 1 / 1;
+        border: 1px solid #b6ccd8;
+        background: #e8f4fb;
+        border-radius: 8px;
+        padding: 0.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .array-index {
+        font-size: 0.66rem;
+        color: #486171;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+      }
+
+      .array-item-value {
+        font-size: 0.75rem;
+        color: #12314a;
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .array-empty,
+      .object-empty {
+        margin-top: 0.2rem;
+        color: #5d6f7d;
+        font-size: 0.82rem;
+      }
+
+      .object-visual {
+        margin-top: 0.25rem;
+        display: grid;
+        gap: 0.3rem;
+        max-height: 200px;
+        overflow: auto;
+      }
+
+      .object-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.45rem;
+        border: 1px solid #c6d5dd;
+        background: #edf5f8;
+        border-radius: 7px;
+        padding: 0.28rem 0.36rem;
+      }
+
+      .object-key,
+      .object-value {
+        font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+      }
+
+      .object-key {
+        color: #26485e;
+      }
+
+      .object-value {
+        color: #102d40;
+        text-align: right;
+        word-break: break-word;
+      }
+
+      .empty {
+        margin: 0.7rem 0 0;
+        color: var(--muted);
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        40% {
+          transform: scale(1.02);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @media (max-width: 860px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <h1>JavaScript Learning Console</h1>
+        <p class="subtitle">
+          Type JavaScript, run it, and watch variables update in real time.
+        </p>
+
+        <div class="controls">
+          <button id="runStepBtn" class="run" title="Shift + Enter">
+            Run (Shift + Enter)
+          </button>
+          <button id="runAllBtn" class="neutral">Run All Code</button>
+          <button id="saveCodeBtn" class="neutral">Save Code</button>
+        </div>
+
+        <div class="workspace-stack">
+          <section id="editorPane" class="workspace-pane workspace-pane-active">
+            <div class="editor-with-lines">
+              <div id="editorLineNumbers" class="editor-line-numbers" aria-hidden="true">1</div>
+              <textarea id="codeInput" class="editor code-editor" spellcheck="false" wrap="off"></textarea>
+            </div>
+          </section>
+
+          <section id="stepPane" class="workspace-pane">
+            <div id="stepLines" class="editor step-lines" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <details class="examples-accordion">
+          <summary class="examples-summary">Examples</summary>
+          <div class="examples-content">
+            <article class="example-card">
+              <h3 class="example-name">Console</h3>
+              <p class="example-description">
+                Quick demo of printing values to the console.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="console-brief">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">Variables</h3>
+              <p class="example-description">
+                Declare variables, reassign one, and log updates.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="variables-basics">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">Advanced Data Types</h3>
+              <p class="example-description">
+                Build an object property-by-property and inspect it.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="object-basics">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">Functions</h3>
+              <p class="example-description">
+                Call built-in JavaScript functions (no custom function needed).
+              </p>
+              <button class="neutral load-example-btn" data-example-id="functions-calls">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">DOM Basics</h3>
+              <p class="example-description">
+                Create a title element and append it to <code>#container</code>.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="dom-title-basic">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">Fetching Data</h3>
+              <p class="example-description">
+                Fetch JSON with <code>await</code> and parse with <code>resp.json()</code>.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="fetch-stocks">Load</button>
+            </article>
+            <article class="example-card">
+              <h3 class="example-name">DOM Manipulation</h3>
+              <p class="example-description">
+                Fetch stock data, add a title/subtitle, then create four simple
+                bars with labels inside.
+              </p>
+              <button class="neutral load-example-btn" data-example-id="dom-stocks-bars">Load</button>
+            </article>
+          </div>
+        </details>
+
+        <p class="tip">
+          Tip: Use <code>let</code>, <code>const</code>, or <code>var</code> for simple variable declarations.
+          Press <code>Shift + Enter</code> to run the next step.
+        </p>
+      </section>
+
+      <section class="stack">
+        <section class="panel">
+          <div class="output-header">
+            <h2>Output</h2>
+          </div>
+
+          <div id="consoleOutputPane" class="output-pane output-pane-active">
+            <div id="output" class="console-output" aria-live="polite"></div>
+          </div>
+          <div id="htmlOutputPane" class="output-pane">
+            <div class="console-output" aria-live="polite">
+              <div
+                id="container"
+                style="background: #d1d5db; min-height: 160px; border-radius: 8px; padding: 12px; color: #1f2937;"
+              ></div>
+            </div>
+          </div>
+          <div id="domOutputPane" class="output-pane">
+            <div id="domTreeOutput" class="console-output dom-visual-output" aria-live="polite"></div>
+          </div>
+          <div class="output-controls">
+            <div class="output-toggle-group" role="group" aria-label="Output View">
+              <button id="consoleViewBtn" class="output-toggle-btn output-toggle-active" type="button">
+                Console Output
+              </button>
+              <button id="htmlViewBtn" class="output-toggle-btn" type="button">Page Preview</button>
+              <button id="domViewBtn" class="output-toggle-btn" type="button">DOM Visualizer</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Variables</h2>
+          <div id="vars" class="vars-grid"></div>
+          <p id="emptyState" class="empty">No variables yet.</p>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const codeInput = document.getElementById("codeInput");
+      const editorLineNumbersEl = document.getElementById("editorLineNumbers");
+      const editorPane = document.getElementById("editorPane");
+      const stepPane = document.getElementById("stepPane");
+      const runStepBtn = document.getElementById("runStepBtn");
+      const runAllBtn = document.getElementById("runAllBtn");
+      const saveCodeBtn = document.getElementById("saveCodeBtn");
+      const stepLinesEl = document.getElementById("stepLines");
+      const loadExampleButtons = document.querySelectorAll(".load-example-btn");
+      const consoleViewBtn = document.getElementById("consoleViewBtn");
+      const htmlViewBtn = document.getElementById("htmlViewBtn");
+      const domViewBtn = document.getElementById("domViewBtn");
+      const consoleOutputPane = document.getElementById("consoleOutputPane");
+      const htmlOutputPane = document.getElementById("htmlOutputPane");
+      const domOutputPane = document.getElementById("domOutputPane");
+      const domTreeOutputEl = document.getElementById("domTreeOutput");
+      const outputEl = document.getElementById("output");
+      const varsEl = document.getElementById("vars");
+      const emptyStateEl = document.getElementById("emptyState");
+      const initialHtmlVisualizerMarkup = htmlOutputPane.innerHTML;
+      const initialContainerOuterHtml = document.getElementById("container").outerHTML;
+
+      const state = Object.create(null);
+      let previousSnapshot = Object.create(null);
+      const promiseStates = new Map();
+      let promiseTokenCounter = 0;
+      let hoveredDomPath = null;
+      const runtimeConsoleMarker = Symbol("runtimeConsoleMarker");
+      const builtinLibraryCatalog = [
+        {
+          globalKey: "Math",
+          name: "Math",
+          kind: "library",
+          summary: "Math helpers for numbers.",
+          methods: ["round()", "max()", "min()", "sqrt()"],
+        },
+        {
+          globalKey: "JSON",
+          name: "JSON",
+          kind: "library",
+          summary: "Read and write JSON strings.",
+          methods: ["parse()", "stringify()"],
+        },
+        {
+          globalKey: "Date",
+          name: "Date",
+          kind: "constructor",
+          summary: "Date and time constructor.",
+          methods: ["new Date()", "now()"],
+        },
+        {
+          globalKey: "Array",
+          name: "Array",
+          kind: "constructor",
+          summary: "Array constructor and static helpers.",
+          methods: ["from()", "isArray()"],
+        },
+        {
+          globalKey: "Object",
+          name: "Object",
+          kind: "constructor",
+          summary: "Object constructor and utilities.",
+          methods: ["keys()", "values()", "entries()"],
+        },
+        {
+          globalKey: "Number",
+          name: "Number",
+          kind: "constructor",
+          summary: "Number constructor and checks.",
+          methods: ["isNaN()", "isFinite()"],
+        },
+        {
+          globalKey: "String",
+          name: "String",
+          kind: "constructor",
+          summary: "String constructor.",
+          methods: ["fromCharCode()"],
+        },
+        {
+          globalKey: "Promise",
+          name: "Promise",
+          kind: "constructor",
+          summary: "Promise constructor and combinators.",
+          methods: ["resolve()", "all()"],
+        },
+        {
+          globalKey: "RegExp",
+          name: "RegExp",
+          kind: "constructor",
+          summary: "Regular expression constructor.",
+          methods: ["test()", "exec()"],
+        },
+        {
+          globalKey: "Intl",
+          name: "Intl",
+          kind: "library",
+          summary: "Internationalization APIs.",
+          methods: ["NumberFormat()", "DateTimeFormat()"],
+        },
+      ];
+      const examples = {
+        "console-brief": `console.log("Hello class!");
+console.log(2 + 3);`,
+        "variables-basics": `let city = "Chicago";
+let temperature = 52;
+temperature = temperature + 5;
+console.log("Updated Temp: " + temperature);`,
+        "object-basics": `let student = {};
+student.name = "Ari";
+student.grade = 10;
+student.isPresent = true;
+
+let otherStudent = { name: "Bob", grade: 9, isPresent: false }`,
+        "functions-calls": `let price = 19.87;
+let rounded = Math.round(price);
+let highest = Math.max(3, 11, 7);
+let root = Math.sqrt(81);`,
+        "dom-title-basic": `let container = document.getElementById("container")
+let title = document.createElement("h1")
+container.appendChild(title)
+title.innerText = "My Page Title"`,
+        "fetch-stocks": `const url = "https://raw.githubusercontent.com/brizandrew/nicar25-javascript-dataviz-101/refs/heads/main/data/stocks.json"
+const resp = await fetch(url)
+const data = await resp.json()
+console.log("Stocks loaded:", Object.keys(data).length)`,
+        "dom-stocks-bars": `const url = "https://raw.githubusercontent.com/brizandrew/nicar25-javascript-dataviz-101/refs/heads/main/data/stocks.json"
+const resp = await fetch(url)
+const stocks = await resp.json()
+
+const container = document.getElementById("container")
+container.style.background = "transparent"
+
+// 1) Title
+const title = document.createElement("h1")
+container.appendChild(title)
+title.textContent = "Indianapolis Stock Prices"
+title.style.color = "#ffffff"
+
+const subtitle = document.createElement("p")
+container.appendChild(subtitle)
+subtitle.textContent = "Current share prices in USD"
+subtitle.style.color = "#ffffff"
+
+// 2) Four simple bars (labels inside)
+const barElv = document.createElement("div")
+barElv.style.background = "#f0c040"
+barElv.style.width = stocks.elv + "px"
+barElv.style.color = "#1f1f1f"
+container.appendChild(barElv)
+barElv.textContent = "ELV"
+
+const barSpg = document.createElement("div")
+barSpg.style.background = "#f0c040"
+barSpg.style.width = stocks.spg + "px"
+barSpg.style.color = "#1f1f1f"
+container.appendChild(barSpg)
+barSpg.textContent = "SPG"
+
+const barZbh = document.createElement("div")
+barZbh.style.background = "#f0c040"
+barZbh.style.width = stocks.zbh + "px"
+barZbh.style.color = "#1f1f1f"
+container.appendChild(barZbh)
+barZbh.textContent = "ZBH"
+
+const barOmf = document.createElement("div")
+barOmf.style.background = "#f0c040"
+barOmf.style.width = stocks.omf + "px"
+barOmf.style.color = "#1f1f1f"
+container.appendChild(barOmf)
+barOmf.textContent = "OMF"
+
+// 3) Quick style touch at the end
+barElv.style.marginBottom = "8px"
+barSpg.style.marginBottom = "8px"
+barZbh.style.marginBottom = "8px"
+barOmf.style.marginBottom = "8px"
+
+// 4) Add bar padding (top/bottom 2px, left/right 4px)
+barElv.style.padding = "2px 4px"
+barSpg.style.padding = "2px 4px"
+barZbh.style.padding = "2px 4px"
+barOmf.style.padding = "2px 4px"`,
+      };
+      const stepState = {
+        source: "",
+        lines: [],
+        index: 0,
+        active: false,
+        errorIndex: -1,
+      };
+      let isExecuting = false;
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+      const executeInScope = new AsyncFunction(
+        "scope",
+        "code",
+        `
+          return (async function () {
+            with (scope) {
+              return await eval(code);
+            }
+          }).call(scope);
+        `
+      );
+
+      function formatValue(value) {
+        if (typeof value === "string") {
+          return `"${value}"`;
+        }
+
+        if (
+          value === null ||
+          value === undefined ||
+          typeof value === "number" ||
+          typeof value === "boolean" ||
+          typeof value === "bigint"
+        ) {
+          return String(value);
+        }
+
+        if (typeof value === "function") {
+          return `f ${value.name || "(anonymous)"}`;
+        }
+
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return Object.prototype.toString.call(value);
+        }
+      }
+
+      function formatDisplayValue(value, stringLimit = 72) {
+        if (typeof value === "string") {
+          if (value.length <= stringLimit) {
+            return `"${value}"`;
+          }
+          return `"${value.slice(0, stringLimit)}..."`;
+        }
+        return formatValue(value);
+      }
+
+      function toSingleLinePreview(text, limit = 64) {
+        if (typeof text !== "string") {
+          return "";
+        }
+
+        const singleLine = text.replace(/\s+/g, " ").trim();
+        if (!singleLine) {
+          return "";
+        }
+
+        if (singleLine.length <= limit) {
+          return singleLine;
+        }
+
+        const clipped = singleLine.slice(0, Math.max(0, limit - 3)).trimEnd();
+        return `${clipped}...`;
+      }
+
+      function appendOutput(message, type = "log") {
+        const line = document.createElement("div");
+        line.className = `line ${type}`;
+        line.textContent = message;
+        outputEl.appendChild(line);
+        outputEl.scrollTop = outputEl.scrollHeight;
+      }
+
+      function isPromiseLike(value) {
+        return (
+          value !== null &&
+          (typeof value === "object" || typeof value === "function") &&
+          typeof value.then === "function"
+        );
+      }
+
+      function formatPromiseStateLabel(info) {
+        if (!info) {
+          return "pending";
+        }
+        return info.status;
+      }
+
+      function isResponseLike(value) {
+        if (value === null || typeof value !== "object") {
+          return false;
+        }
+
+        const tag = Object.prototype.toString.call(value);
+        if (tag === "[object Response]") {
+          return true;
+        }
+
+        // Fallback shape check for environments where tag may not be preserved.
+        return (
+          typeof value.status === "number" &&
+          typeof value.ok === "boolean" &&
+          "headers" in value &&
+          typeof value.url === "string"
+        );
+      }
+
+      function getResponseInfo(value) {
+        if (!isResponseLike(value)) {
+          return null;
+        }
+
+        try {
+          return {
+            status: value.status,
+            statusText: value.statusText || "",
+            ok: value.ok,
+            type: value.type || "basic",
+            redirected: Boolean(value.redirected),
+            url: value.url || "(no url)",
+            bodyUsed: Boolean(value.bodyUsed),
+          };
+        } catch {
+          return {
+            status: typeof value.status === "number" ? value.status : 0,
+            statusText: "",
+            ok: Boolean(value.ok),
+            type: "basic",
+            redirected: false,
+            url: typeof value.url === "string" && value.url ? value.url : "(unknown)",
+            bodyUsed: false,
+          };
+        }
+      }
+
+      function isHtmlElement(value) {
+        if (value === null || typeof value !== "object") {
+          return false;
+        }
+
+        if (typeof Element !== "undefined" && value instanceof Element) {
+          return true;
+        }
+
+        const tag = Object.prototype.toString.call(value);
+        if (tag === "[object Element]" || /\[object HTML.+Element\]/.test(tag)) {
+          return true;
+        }
+
+        return value.nodeType === 1 && typeof value.tagName === "string";
+      }
+
+      function getElementInfo(value) {
+        if (!isHtmlElement(value)) {
+          return null;
+        }
+
+        const tagName =
+          typeof value.tagName === "string" && value.tagName
+            ? value.tagName.toLowerCase()
+            : "element";
+        const idValue = typeof value.id === "string" ? value.id : "";
+        const classValue =
+          typeof value.className === "string"
+            ? value.className.trim()
+            : value.className && typeof value.className.baseVal === "string"
+              ? value.className.baseVal.trim()
+              : "";
+        const childCount =
+          typeof value.childElementCount === "number" ? value.childElementCount : 0;
+        const rawText =
+          typeof value.innerText === "string"
+            ? value.innerText
+            : typeof value.textContent === "string"
+              ? value.textContent
+              : "";
+        const innerTextPreview = toSingleLinePreview(rawText, 64);
+        const attributes = [];
+
+        if (typeof value.getAttributeNames === "function") {
+          const names = value.getAttributeNames();
+          names.forEach((name) => {
+            if (name === "id" || name === "class" || name === "style") {
+              return;
+            }
+            const raw = value.getAttribute(name);
+            attributes.push(raw === "" ? name : `${name}="${raw}"`);
+          });
+        } else if (value.attributes && typeof value.attributes.length === "number") {
+          for (let i = 0; i < value.attributes.length; i += 1) {
+            const attribute = value.attributes[i];
+            if (!attribute || !attribute.name) {
+              continue;
+            }
+            if (
+              attribute.name === "id" ||
+              attribute.name === "class" ||
+              attribute.name === "style"
+            ) {
+              continue;
+            }
+            attributes.push(
+              attribute.value === ""
+                ? attribute.name
+                : `${attribute.name}="${attribute.value}"`
+            );
+          }
+        }
+
+        const styleAttribute =
+          typeof value.getAttribute === "function" ? value.getAttribute("style") || "" : "";
+        const inlineStyles = styleAttribute
+          .split(";")
+          .map((chunk) => chunk.trim().replace(/\s+/g, " "))
+          .filter(Boolean);
+
+        return {
+          tagName,
+          id: idValue,
+          className: classValue,
+          childCount,
+          innerTextPreview,
+          attributes,
+          inlineStyles,
+        };
+      }
+
+      function getBuiltinLibraryInfo(value) {
+        if (value === null || value === undefined) {
+          return null;
+        }
+
+        if (value[runtimeConsoleMarker] === true) {
+          return {
+            name: "Console",
+            kind: "library",
+            summary: "Writes logs and errors to the output pane.",
+            methods: ["log()", "warn()", "error()"],
+          };
+        }
+
+        for (const library of builtinLibraryCatalog) {
+          const globalValue = globalThis[library.globalKey];
+          if (typeof globalValue !== "undefined" && value === globalValue) {
+            return library;
+          }
+        }
+
+        return null;
+      }
+
+      function trackPromiseForKey(key, promiseLike) {
+        const token = ++promiseTokenCounter;
+        const info = {
+          token,
+          source: promiseLike,
+          status: "pending",
+          value: undefined,
+          reason: undefined,
+        };
+        promiseStates.set(key, info);
+
+        Promise.resolve(promiseLike).then(
+          (resolvedValue) => {
+            const latest = promiseStates.get(key);
+            if (!latest || latest.token !== token) {
+              return;
+            }
+            latest.status = "fulfilled";
+            latest.value = resolvedValue;
+            renderVariables(new Set([key]));
+          },
+          (rejectionReason) => {
+            const latest = promiseStates.get(key);
+            if (!latest || latest.token !== token) {
+              return;
+            }
+            latest.status = "rejected";
+            latest.reason = rejectionReason;
+            renderVariables(new Set([key]));
+          }
+        );
+      }
+
+      function getPromiseInfo(key, value) {
+        if (!isPromiseLike(value)) {
+          promiseStates.delete(key);
+          return null;
+        }
+
+        const current = promiseStates.get(key);
+        if (!current || current.source !== value) {
+          trackPromiseForKey(key, value);
+          return promiseStates.get(key) || null;
+        }
+
+        return current;
+      }
+
+      function getSnapshotLabel(
+        key,
+        value,
+        promiseInfoOverride = null,
+        responseInfoOverride = null,
+        elementInfoOverride = null,
+        builtinInfoOverride = null
+      ) {
+        if (isPromiseLike(value)) {
+          const promiseInfo = promiseInfoOverride || getPromiseInfo(key, value);
+          return `Promise:${formatPromiseStateLabel(promiseInfo)}`;
+        }
+
+        const responseInfo = responseInfoOverride || getResponseInfo(value);
+        if (responseInfo) {
+          return `Response:${responseInfo.status}:${responseInfo.ok ? 1 : 0}:${responseInfo.bodyUsed ? 1 : 0}:${responseInfo.type}`;
+        }
+
+        const elementInfo = elementInfoOverride || getElementInfo(value);
+        if (elementInfo) {
+          try {
+            return `Element:${JSON.stringify(elementInfo)}`;
+          } catch {
+            return `Element:${elementInfo.tagName}:${elementInfo.id}:${elementInfo.className}:${elementInfo.childCount}`;
+          }
+        }
+
+        const builtinInfo = builtinInfoOverride || getBuiltinLibraryInfo(value);
+        if (builtinInfo) {
+          return `Builtin:${builtinInfo.name}:${builtinInfo.kind}`;
+        }
+
+        if (typeof value === "object" && value !== null) {
+          try {
+            return JSON.stringify(value);
+          } catch {
+            return formatValue(value);
+          }
+        }
+        return formatValue(value);
+      }
+
+      function createArrayVisual(value) {
+        if (value.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "array-empty";
+          empty.textContent = "Empty array []";
+          return empty;
+        }
+
+        const visual = document.createElement("div");
+        visual.className = "array-visual";
+
+        value.forEach((item, index) => {
+          const cell = document.createElement("div");
+          cell.className = "array-cell";
+
+          const indexEl = document.createElement("div");
+          indexEl.className = "array-index";
+          indexEl.textContent = `[${index}]`;
+
+          const valueEl = document.createElement("div");
+          valueEl.className = "array-item-value";
+          valueEl.textContent = formatDisplayValue(item, 28);
+
+          cell.appendChild(indexEl);
+          cell.appendChild(valueEl);
+          visual.appendChild(cell);
+        });
+
+        return visual;
+      }
+
+      function createObjectVisual(value) {
+        const entries = Object.entries(value);
+        if (entries.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "object-empty";
+          empty.textContent = "Empty object {}";
+          return empty;
+        }
+
+        const visual = document.createElement("div");
+        visual.className = "object-visual";
+
+        entries.forEach(([prop, propValue]) => {
+          const row = document.createElement("div");
+          row.className = "object-row";
+
+          const keyEl = document.createElement("div");
+          keyEl.className = "object-key";
+          keyEl.textContent = prop;
+
+          const valueEl = document.createElement("div");
+          valueEl.className = "object-value";
+          valueEl.textContent = formatDisplayValue(propValue, 42);
+
+          row.appendChild(keyEl);
+          row.appendChild(valueEl);
+          visual.appendChild(row);
+        });
+
+        return visual;
+      }
+
+      function createPromiseVisual(promiseInfo) {
+        const visual = document.createElement("div");
+        visual.className = "promise-visual";
+
+        const statusEl = document.createElement("div");
+        statusEl.className = `promise-status ${promiseInfo ? promiseInfo.status : "pending"}`;
+        statusEl.textContent = promiseInfo ? promiseInfo.status : "pending";
+        visual.appendChild(statusEl);
+
+        return visual;
+      }
+
+      function createResponseVisual(responseInfo) {
+        const visual = document.createElement("div");
+        visual.className = "response-visual";
+
+        const badges = document.createElement("div");
+        badges.className = "response-badges";
+
+        const statusBadge = document.createElement("div");
+        statusBadge.className = `response-badge${responseInfo.ok ? "" : " not-ok"}`;
+        statusBadge.textContent = `status ${responseInfo.status}${responseInfo.statusText ? ` ${responseInfo.statusText}` : ""}`;
+        badges.appendChild(statusBadge);
+
+        const okBadge = document.createElement("div");
+        okBadge.className = `response-badge${responseInfo.ok ? "" : " not-ok"}`;
+        okBadge.textContent = responseInfo.ok ? "ok true" : "ok false";
+        badges.appendChild(okBadge);
+
+        const usedBadge = document.createElement("div");
+        usedBadge.className = "response-badge";
+        usedBadge.textContent = responseInfo.bodyUsed ? "body used" : "body unused";
+        badges.appendChild(usedBadge);
+
+        const typeBadge = document.createElement("div");
+        typeBadge.className = "response-badge";
+        typeBadge.textContent = `type ${responseInfo.type}`;
+        badges.appendChild(typeBadge);
+
+        visual.appendChild(badges);
+
+        if (responseInfo.redirected) {
+          const redirectEl = document.createElement("div");
+          redirectEl.className = "response-detail";
+          redirectEl.textContent = "redirected: true";
+          visual.appendChild(redirectEl);
+        }
+
+        return visual;
+      }
+
+      function createBuiltinVisual(builtinInfo) {
+        const visual = document.createElement("div");
+        visual.className = "builtin-visual";
+
+        if (Array.isArray(builtinInfo.methods) && builtinInfo.methods.length > 0) {
+          const badges = document.createElement("div");
+          badges.className = "builtin-badges";
+          const visibleMethods = builtinInfo.methods.slice(0, 2);
+          visibleMethods.forEach((method) => {
+            const badge = document.createElement("div");
+            badge.className = "builtin-badge";
+            badge.textContent = method;
+            badges.appendChild(badge);
+          });
+
+          if (builtinInfo.methods.length > visibleMethods.length) {
+            const moreBadge = document.createElement("div");
+            moreBadge.className = "builtin-badge";
+            moreBadge.textContent = "...";
+            badges.appendChild(moreBadge);
+          }
+
+          visual.appendChild(badges);
+        }
+
+        return visual;
+      }
+
+      function createElementVisual(elementInfo) {
+        const visual = document.createElement("div");
+        visual.className = "element-visual";
+
+        const badges = document.createElement("div");
+        badges.className = "element-badges";
+
+        const tagBadge = document.createElement("div");
+        tagBadge.className = "element-badge";
+        tagBadge.textContent = `<${elementInfo.tagName}>`;
+        badges.appendChild(tagBadge);
+
+        if (elementInfo.id) {
+          const idBadge = document.createElement("div");
+          idBadge.className = "element-badge";
+          idBadge.textContent = `id ${elementInfo.id}`;
+          badges.appendChild(idBadge);
+        }
+
+        if (elementInfo.className) {
+          const classBadge = document.createElement("div");
+          classBadge.className = "element-badge";
+          classBadge.textContent = `class ${elementInfo.className}`;
+          badges.appendChild(classBadge);
+        }
+
+        visual.appendChild(badges);
+
+        const childrenEl = document.createElement("div");
+        childrenEl.className = "element-detail";
+        childrenEl.textContent = `children: ${elementInfo.childCount}`;
+        visual.appendChild(childrenEl);
+
+        const textEl = document.createElement("div");
+        textEl.className = "element-detail";
+        textEl.textContent = elementInfo.innerTextPreview
+          ? `innerText: "${elementInfo.innerTextPreview}"`
+          : "innerText: (empty)";
+        visual.appendChild(textEl);
+
+        const attrsTitle = document.createElement("div");
+        attrsTitle.className = "element-section-title";
+        attrsTitle.textContent = "Attributes";
+        visual.appendChild(attrsTitle);
+
+        if (elementInfo.attributes.length === 0) {
+          const attrsEmpty = document.createElement("div");
+          attrsEmpty.className = "element-detail";
+          attrsEmpty.textContent = "none";
+          visual.appendChild(attrsEmpty);
+        } else {
+          const attrsList = document.createElement("ul");
+          attrsList.className = "element-list";
+          elementInfo.attributes.forEach((attr) => {
+            const item = document.createElement("li");
+            item.className = "element-list-item";
+            item.textContent = attr;
+            attrsList.appendChild(item);
+          });
+          visual.appendChild(attrsList);
+        }
+
+        const stylesTitle = document.createElement("div");
+        stylesTitle.className = "element-section-title";
+        stylesTitle.textContent = "Inline styles";
+        visual.appendChild(stylesTitle);
+
+        if (elementInfo.inlineStyles.length === 0) {
+          const stylesEmpty = document.createElement("div");
+          stylesEmpty.className = "element-detail";
+          stylesEmpty.textContent = "none";
+          visual.appendChild(stylesEmpty);
+        } else {
+          const stylesList = document.createElement("ul");
+          stylesList.className = "element-list";
+          elementInfo.inlineStyles.forEach((styleRule) => {
+            const item = document.createElement("li");
+            item.className = "element-list-item";
+            item.textContent = styleRule;
+            stylesList.appendChild(item);
+          });
+          visual.appendChild(stylesList);
+        }
+
+        return visual;
+      }
+
+      function splitTopLevelByComma(text) {
+        const parts = [];
+        let current = "";
+        let depth = 0;
+        let quote = null;
+
+        for (let i = 0; i < text.length; i += 1) {
+          const char = text[i];
+          const prev = text[i - 1];
+
+          if (quote) {
+            current += char;
+            if (char === quote && prev !== "\\") {
+              quote = null;
+            }
+            continue;
+          }
+
+          if (char === "\"" || char === "'" || char === "`") {
+            quote = char;
+            current += char;
+            continue;
+          }
+
+          if (char === "(" || char === "{" || char === "[") {
+            depth += 1;
+            current += char;
+            continue;
+          }
+
+          if (char === ")" || char === "}" || char === "]") {
+            depth -= 1;
+            current += char;
+            continue;
+          }
+
+          if (char === "," && depth === 0) {
+            parts.push(current.trim());
+            current = "";
+            continue;
+          }
+
+          current += char;
+        }
+
+        if (current.trim()) {
+          parts.push(current.trim());
+        }
+
+        return parts;
+      }
+
+      function rewriteDeclarations(code) {
+        return code
+          .split("\n")
+          .map((line) => {
+            const match = line.match(/^(\s*)(let|const|var)\s+(.+?)\s*;?\s*$/);
+            if (!match) {
+              return line;
+            }
+
+            const indent = match[1];
+            const declarationList = match[3];
+            const declarators = splitTopLevelByComma(declarationList);
+            const rewritten = [];
+
+            for (const declarator of declarators) {
+              const itemMatch = declarator.match(
+                /^([A-Za-z_$][\w$]*)(?:\s*=\s*([\s\S]+))?$/
+              );
+
+              if (!itemMatch) {
+                return line;
+              }
+
+              const name = itemMatch[1];
+              const value = itemMatch[2] ? itemMatch[2] : "undefined";
+              rewritten.push(`scope.${name} = ${value}`);
+            }
+
+            return `${indent}${rewritten.join(`;\n${indent}`)};`;
+          })
+          .join("\n");
+      }
+
+      function buildLines(source) {
+        return source === "" ? [] : source.split("\n");
+      }
+
+      function renderStepRunner() {
+        stepLinesEl.innerHTML = "";
+
+        if (stepState.lines.length === 0) {
+          const row = document.createElement("div");
+          row.className = "step-line";
+
+          const marker = document.createElement("span");
+          marker.className = "step-marker";
+          marker.textContent = "•";
+
+          const number = document.createElement("span");
+          number.className = "step-number";
+          number.textContent = "-";
+
+          const code = document.createElement("span");
+          code.className = "step-code blank";
+          code.textContent = "(no code)";
+
+          row.appendChild(marker);
+          row.appendChild(number);
+          row.appendChild(code);
+          stepLinesEl.appendChild(row);
+          return;
+        }
+
+        const targetIndex =
+          stepState.errorIndex >= 0
+            ? stepState.errorIndex
+            : stepState.index < stepState.lines.length
+              ? stepState.index
+              : stepState.lines.length - 1;
+        let targetRow = null;
+
+        stepState.lines.forEach((line, idx) => {
+          const row = document.createElement("div");
+          row.className = "step-line";
+
+          let markerText = "•";
+          if (stepState.errorIndex === idx) {
+            markerText = "!";
+            row.classList.add("error");
+          } else if (idx < stepState.index) {
+            markerText = "✓";
+            row.classList.add("done");
+          } else if (idx === stepState.index && stepState.index < stepState.lines.length) {
+            markerText = "▶";
+            row.classList.add("current");
+          }
+
+          const marker = document.createElement("span");
+          marker.className = "step-marker";
+          marker.textContent = markerText;
+
+          const number = document.createElement("span");
+          number.className = "step-number";
+          number.textContent = String(idx + 1);
+
+          const code = document.createElement("span");
+          code.className = "step-code";
+          if (line.trim() === "") {
+            code.classList.add("blank");
+            code.textContent = "(blank)";
+          } else {
+            code.textContent = line;
+          }
+
+          row.appendChild(marker);
+          row.appendChild(number);
+          row.appendChild(code);
+          stepLinesEl.appendChild(row);
+
+          if (idx === targetIndex) {
+            targetRow = row;
+          }
+        });
+
+        if (targetRow && !stepPane.hidden) {
+          targetRow.scrollIntoView({ block: "nearest" });
+        }
+      }
+
+      function syncEditorLineNumberScroll() {
+        if (!editorLineNumbersEl) {
+          return;
+        }
+
+        // Keep the gutter viewport identical to the textarea viewport.
+        editorLineNumbersEl.style.top = `${codeInput.clientTop}px`;
+        editorLineNumbersEl.style.height = `${codeInput.clientHeight}px`;
+        editorLineNumbersEl.scrollTop = codeInput.scrollTop;
+      }
+
+      function renderEditorLineNumbers() {
+        if (!editorLineNumbersEl) {
+          return;
+        }
+
+        const lineCount = Math.max(1, codeInput.value.split("\n").length);
+        const lines = Array.from({ length: lineCount }, (_, idx) => String(idx + 1)).join(
+          "\n"
+        );
+        editorLineNumbersEl.textContent = lines;
+        syncEditorLineNumberScroll();
+      }
+
+      function resetStepRunnerFromEditor() {
+        stepState.source = codeInput.value;
+        stepState.lines = buildLines(stepState.source);
+        stepState.index = 0;
+        stepState.active = false;
+        stepState.errorIndex = -1;
+        renderEditorLineNumbers();
+        renderStepRunner();
+        setWorkspaceMode("editor");
+      }
+
+      function setWorkspaceMode(mode) {
+        const showStepPane = mode === "step";
+        editorPane.classList.toggle("workspace-pane-active", !showStepPane);
+        stepPane.classList.toggle("workspace-pane-active", showStepPane);
+        editorPane.hidden = showStepPane;
+        stepPane.hidden = !showStepPane;
+      }
+
+      function setOutputView(mode) {
+        const showConsole = mode === "console";
+        const showHtml = mode === "html";
+        const showDom = mode === "dom";
+        consoleOutputPane.classList.toggle("output-pane-active", showConsole);
+        htmlOutputPane.classList.toggle("output-pane-active", showHtml);
+        domOutputPane.classList.toggle("output-pane-active", showDom);
+        consoleViewBtn.classList.toggle("output-toggle-active", showConsole);
+        htmlViewBtn.classList.toggle("output-toggle-active", showHtml);
+        domViewBtn.classList.toggle("output-toggle-active", showDom);
+        if (showDom) {
+          renderDomVisualizer();
+        }
+      }
+
+      function resetHtmlVisualizer() {
+        document.getElementById("stocks-demo-style")?.remove();
+        htmlOutputPane.innerHTML = initialHtmlVisualizerMarkup;
+      }
+
+      function buildSavedHtmlDocument(sourceCode) {
+        const safeCode = String(sourceCode || "").replace(/<\/script/gi, "<\\/script");
+        return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saved JavaScript Page</title>
+  </head>
+  <body>
+    ${initialContainerOuterHtml}
+    <script type="module">
+${safeCode}
+    <\/script>
+  </body>
+</html>
+`;
+      }
+
+      function saveCodeAsHtml() {
+        const sourceCode = codeInput.value;
+        const htmlDocument = buildSavedHtmlDocument(sourceCode);
+        const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = "page-preview.html";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+      }
+
+      function getDomPathFromContainer(element) {
+        const containerEl = document.getElementById("container");
+        if (!containerEl || !element || element.nodeType !== 1) {
+          return null;
+        }
+
+        if (element === containerEl) {
+          return "root";
+        }
+
+        const pathParts = [];
+        let current = element;
+        while (current && current !== containerEl) {
+          const parent = current.parentElement;
+          if (!parent) {
+            return null;
+          }
+          const index = Array.prototype.indexOf.call(parent.children, current);
+          if (index < 0) {
+            return null;
+          }
+          pathParts.unshift(String(index));
+          current = parent;
+        }
+
+        return current === containerEl ? pathParts.join(".") : null;
+      }
+
+      function getElementByDomPath(domPath) {
+        const containerEl = document.getElementById("container");
+        if (!containerEl) {
+          return null;
+        }
+
+        if (domPath === "root") {
+          return containerEl;
+        }
+
+        if (!domPath) {
+          return null;
+        }
+
+        let current = containerEl;
+        const parts = domPath.split(".");
+        for (const part of parts) {
+          const index = Number(part);
+          if (!Number.isInteger(index) || index < 0 || index >= current.children.length) {
+            return null;
+          }
+          current = current.children[index];
+        }
+
+        return current;
+      }
+
+      function syncLinkedDomHighlights() {
+        const hasHover = hoveredDomPath !== null;
+
+        varsEl.querySelectorAll(".var-card[data-dom-path]").forEach((card) => {
+          card.classList.toggle(
+            "hover-linked",
+            hasHover && card.dataset.domPath === hoveredDomPath
+          );
+        });
+
+        if (domTreeOutputEl) {
+          domTreeOutputEl.querySelectorAll(".dom-node[data-dom-path]").forEach((node) => {
+            node.classList.toggle(
+              "hover-linked",
+              hasHover && node.dataset.domPath === hoveredDomPath
+            );
+          });
+        }
+
+        htmlOutputPane.querySelectorAll(".dom-hover-outline").forEach((el) => {
+          el.classList.remove("dom-hover-outline");
+        });
+
+        if (!hasHover) {
+          return;
+        }
+
+        const element = getElementByDomPath(hoveredDomPath);
+        if (element) {
+          element.classList.add("dom-hover-outline");
+        }
+      }
+
+      function setHoveredDomPath(domPath) {
+        if (!domPath) {
+          return;
+        }
+        hoveredDomPath = domPath;
+        syncLinkedDomHighlights();
+      }
+
+      function clearHoveredDomPath(domPath) {
+        if (hoveredDomPath !== domPath) {
+          return;
+        }
+        hoveredDomPath = null;
+        syncLinkedDomHighlights();
+      }
+
+      function renderDomVisualizer() {
+        if (!domTreeOutputEl) {
+          return;
+        }
+
+        const containerEl = document.getElementById("container");
+        domTreeOutputEl.innerHTML = "";
+        if (!containerEl) {
+          domTreeOutputEl.textContent = "(no #container element found)";
+          return;
+        }
+
+        const treeEl = document.createElement("div");
+        treeEl.className = "dom-tree";
+        domTreeOutputEl.appendChild(treeEl);
+
+        const appendNode = (node, depth) => {
+          if (!node || node.nodeType !== 1) {
+            return;
+          }
+
+          const row = document.createElement("div");
+          row.className = "dom-node";
+          row.style.paddingLeft = `${8 + depth * 14}px`;
+          const tagName =
+            typeof node.tagName === "string" ? node.tagName.toLowerCase() : "element";
+          const idLabel = node.id ? `#${node.id}` : "";
+          row.textContent = `${tagName}${idLabel}`;
+
+          const domPath = getDomPathFromContainer(node);
+          if (domPath !== null) {
+            row.dataset.domPath = domPath;
+            row.addEventListener("mouseenter", () => {
+              setHoveredDomPath(domPath);
+            });
+            row.addEventListener("mouseleave", () => {
+              clearHoveredDomPath(domPath);
+            });
+          }
+
+          treeEl.appendChild(row);
+          Array.from(node.children).forEach((child) => {
+            appendNode(child, depth + 1);
+          });
+        };
+
+        appendNode(containerEl, 0);
+        syncLinkedDomHighlights();
+      }
+
+      function renderVariables(changedKeys = new Set()) {
+        const keys = Object.keys(state).sort();
+        varsEl.innerHTML = "";
+
+        if (keys.length === 0) {
+          emptyStateEl.style.display = "block";
+          previousSnapshot = Object.create(null);
+          syncLinkedDomHighlights();
+          return;
+        }
+
+        emptyStateEl.style.display = "none";
+        const nextSnapshot = Object.create(null);
+
+        for (const key of keys) {
+          const rawValue = state[key];
+          const promiseInfo = getPromiseInfo(key, rawValue);
+          const responseInfo = promiseInfo ? null : getResponseInfo(rawValue);
+          const elementInfo = promiseInfo || responseInfo ? null : getElementInfo(rawValue);
+          const builtinInfo =
+            promiseInfo || responseInfo || elementInfo
+              ? null
+              : getBuiltinLibraryInfo(rawValue);
+          const valueLabel = getSnapshotLabel(
+            key,
+            rawValue,
+            promiseInfo,
+            responseInfo,
+            elementInfo,
+            builtinInfo
+          );
+          nextSnapshot[key] = valueLabel;
+
+          const card = document.createElement("div");
+          const hasChanged =
+            changedKeys.has(key) || previousSnapshot[key] !== valueLabel;
+          const promiseClass = promiseInfo ? " promise" : "";
+          const responseClass = responseInfo ? " response" : "";
+          const elementClass = elementInfo ? " element" : "";
+          const builtinClass = builtinInfo ? " builtin" : "";
+          card.className = `var-card${hasChanged ? " changed" : ""}${promiseClass}${responseClass}${elementClass}${builtinClass}`;
+
+          const nameEl = document.createElement("div");
+          nameEl.className = "var-name";
+          nameEl.textContent = key;
+
+          const metaEl = document.createElement("div");
+          metaEl.className = "var-meta";
+          if (promiseInfo) {
+            metaEl.textContent = "Promise";
+          } else if (responseInfo) {
+            metaEl.textContent = "Response";
+          } else if (elementInfo) {
+            metaEl.textContent = `HTML <${elementInfo.tagName}>`;
+          } else if (builtinInfo) {
+            metaEl.textContent = "Built-in";
+          } else if (Array.isArray(rawValue)) {
+            metaEl.textContent = `Array (${rawValue.length})`;
+          } else if (rawValue !== null && typeof rawValue === "object") {
+            metaEl.textContent = "Object";
+          } else {
+            metaEl.textContent = typeof rawValue;
+          }
+
+          card.appendChild(nameEl);
+          card.appendChild(metaEl);
+
+          if (elementInfo) {
+            const domPath = getDomPathFromContainer(rawValue);
+            if (domPath !== null) {
+              card.dataset.domPath = domPath;
+              card.classList.add("linked-element");
+              card.addEventListener("mouseenter", () => {
+                setHoveredDomPath(domPath);
+              });
+              card.addEventListener("mouseleave", () => {
+                clearHoveredDomPath(domPath);
+              });
+            }
+          }
+
+          if (promiseInfo) {
+            card.appendChild(createPromiseVisual(promiseInfo));
+          } else if (responseInfo) {
+            card.appendChild(createResponseVisual(responseInfo));
+          } else if (elementInfo) {
+            card.appendChild(createElementVisual(elementInfo));
+          } else if (builtinInfo) {
+            card.appendChild(createBuiltinVisual(builtinInfo));
+          } else if (Array.isArray(rawValue)) {
+            card.appendChild(createArrayVisual(rawValue));
+          } else if (rawValue !== null && typeof rawValue === "object") {
+            card.appendChild(createObjectVisual(rawValue));
+          } else {
+            const primitiveEl = document.createElement("div");
+            primitiveEl.className = "var-value";
+            primitiveEl.textContent = formatDisplayValue(rawValue, 88);
+            card.appendChild(primitiveEl);
+          }
+
+          varsEl.appendChild(card);
+        }
+
+        previousSnapshot = nextSnapshot;
+        syncLinkedDomHighlights();
+      }
+
+      function createRuntimeConsole() {
+        const runtimeConsole = {
+          log: (...args) => {
+            appendOutput(args.map(formatValue).join(" "), "log");
+          },
+          warn: (...args) => {
+            appendOutput(args.map(formatValue).join(" "), "warn");
+          },
+          error: (...args) => {
+            appendOutput(args.map(formatValue).join(" "), "error");
+          },
+        };
+
+        Object.defineProperty(runtimeConsole, runtimeConsoleMarker, {
+          value: true,
+          enumerable: false,
+          configurable: false,
+        });
+
+        return runtimeConsole;
+      }
+
+      function createScope(changedKeys, runtimeConsole) {
+        return new Proxy(state, {
+          has(target, key) {
+            if (key === Symbol.unscopables) {
+              return false;
+            }
+            if (key === "console") {
+              return true;
+            }
+            return key in target || key in globalThis;
+          },
+          get(target, key) {
+            if (key === Symbol.unscopables) {
+              return undefined;
+            }
+
+            if (key === "console") {
+              return runtimeConsole;
+            }
+
+            if (key in target) {
+              return target[key];
+            }
+
+            const globalValue = globalThis[key];
+            if (key === "fetch" && typeof globalValue === "function") {
+              return globalValue.bind(globalThis);
+            }
+
+            return globalValue;
+          },
+          set(target, key, value) {
+            if (typeof key === "string") {
+              target[key] = value;
+              if (isPromiseLike(value)) {
+                trackPromiseForKey(key, value);
+              } else {
+                promiseStates.delete(key);
+              }
+              changedKeys.add(key);
+              renderVariables(changedKeys);
+              return true;
+            }
+
+            target[key] = value;
+            return true;
+          },
+          deleteProperty(target, key) {
+            if (typeof key === "string" && key in target) {
+              delete target[key];
+              promiseStates.delete(key);
+              changedKeys.add(key);
+              renderVariables(changedKeys);
+            }
+            return true;
+          },
+        });
+      }
+
+      async function executeSource(source, changedKeys) {
+        const rewrittenSource = rewriteDeclarations(source);
+        if (!rewrittenSource.trim()) {
+          return;
+        }
+
+        const wrappedSource = `(async () => {\n${rewrittenSource}\n})()`;
+        const runtimeConsole = createRuntimeConsole();
+        const scope = createScope(changedKeys, runtimeConsole);
+        await executeInScope(scope, wrappedSource);
+      }
+
+      function clearRuntimeState() {
+        outputEl.innerHTML = "";
+        for (const key of Object.keys(state)) {
+          delete state[key];
+        }
+        promiseStates.clear();
+        previousSnapshot = Object.create(null);
+        hoveredDomPath = null;
+        resetHtmlVisualizer();
+        renderVariables();
+        renderDomVisualizer();
+      }
+
+      async function runAllCode() {
+        if (isExecuting) {
+          return;
+        }
+
+        const source = codeInput.value;
+        clearRuntimeState();
+
+        stepState.source = source;
+        stepState.lines = buildLines(source);
+        stepState.index = 0;
+        stepState.active = false;
+        stepState.errorIndex = -1;
+        setWorkspaceMode("step");
+        renderStepRunner();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+
+        const changedKeys = new Set();
+        isExecuting = true;
+        try {
+          await executeSource(source, changedKeys);
+          stepState.index = stepState.lines.length;
+        } catch (error) {
+          appendOutput(error.stack || String(error), "error");
+        } finally {
+          isExecuting = false;
+          renderVariables(changedKeys);
+          renderDomVisualizer();
+          renderStepRunner();
+          setWorkspaceMode("editor");
+        }
+      }
+
+      function startStepSession() {
+        stepState.source = codeInput.value;
+        stepState.lines = buildLines(stepState.source);
+        stepState.index = 0;
+        stepState.active = true;
+        stepState.errorIndex = -1;
+        clearRuntimeState();
+        setWorkspaceMode("step");
+      }
+
+      async function runStep() {
+        if (isExecuting) {
+          return;
+        }
+
+        const codeChanged = stepState.source !== codeInput.value;
+        const needsNewSession =
+          !stepState.active ||
+          codeChanged ||
+          stepState.index >= stepState.lines.length ||
+          stepState.errorIndex >= 0;
+
+        if (needsNewSession) {
+          startStepSession();
+          renderStepRunner();
+          return;
+        }
+
+        if (stepState.lines.length === 0) {
+          stepState.active = false;
+          renderStepRunner();
+          setWorkspaceMode("editor");
+          return;
+        }
+
+        renderStepRunner();
+        const lineToRun = stepState.lines[stepState.index];
+        const currentIndex = stepState.index;
+        const changedKeys = new Set();
+
+        isExecuting = true;
+        try {
+          await executeSource(lineToRun, changedKeys);
+          stepState.index += 1;
+          if (stepState.index >= stepState.lines.length) {
+            stepState.active = false;
+          }
+        } catch (error) {
+          stepState.errorIndex = currentIndex;
+          stepState.active = false;
+          appendOutput(error.stack || String(error), "error");
+        } finally {
+          isExecuting = false;
+          renderVariables(changedKeys);
+          renderDomVisualizer();
+          renderStepRunner();
+          if (!stepState.active) {
+            setWorkspaceMode("editor");
+          }
+        }
+      }
+
+      runStepBtn.addEventListener("click", () => {
+        void runStep();
+      });
+      runAllBtn.addEventListener("click", () => {
+        void runAllCode();
+      });
+      saveCodeBtn.addEventListener("click", () => {
+        saveCodeAsHtml();
+      });
+      consoleViewBtn.addEventListener("click", () => {
+        setOutputView("console");
+      });
+      htmlViewBtn.addEventListener("click", () => {
+        setOutputView("html");
+      });
+      domViewBtn.addEventListener("click", () => {
+        setOutputView("dom");
+      });
+
+      loadExampleButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const exampleId = button.dataset.exampleId;
+          if (!exampleId || !examples[exampleId]) {
+            appendOutput("Example not found.", "error");
+            return;
+          }
+
+          codeInput.value = examples[exampleId];
+          resetStepRunnerFromEditor();
+          codeInput.focus();
+        });
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.shiftKey) {
+          if (event.defaultPrevented) {
+            return;
+          }
+          event.preventDefault();
+          void runStep();
+        }
+      });
+
+      codeInput.addEventListener("input", resetStepRunnerFromEditor);
+      codeInput.addEventListener("scroll", syncEditorLineNumberScroll);
+      window.addEventListener("resize", renderEditorLineNumbers);
+      if (typeof ResizeObserver !== "undefined") {
+        const editorResizeObserver = new ResizeObserver(() => {
+          renderEditorLineNumbers();
+        });
+        editorResizeObserver.observe(codeInput);
+      }
+
+      resetStepRunnerFromEditor();
+      setOutputView("console");
+      renderVariables();
+      renderDomVisualizer();
+    </script>
+  </body>
+</html>
