@@ -270,6 +270,28 @@
         color: #2a2a22;
       }
 
+      .control-field {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0 0.2rem;
+      }
+
+      .control-field label {
+        font-size: 0.82rem;
+        color: #3a4a56;
+        font-weight: 600;
+      }
+
+      .control-select {
+        border: 1px solid #cfd5d8;
+        border-radius: 8px;
+        padding: 0.45rem 0.55rem;
+        background: #f2f4f5;
+        color: #1f2f3a;
+        font-weight: 600;
+      }
+
       .tip {
         margin-top: 0.65rem;
         color: var(--muted);
@@ -338,16 +360,13 @@
         color: #0f5b87;
       }
 
-      .edu-links {
-        margin: 0.45rem 0 0;
-        padding-left: 1rem;
-        display: grid;
-        gap: 0.2rem;
-      }
-
-      .edu-links a {
+      .edu-learn-more {
+        display: inline-block;
+        margin-top: 0.5rem;
         color: #0f5b87;
-        font-size: 0.78rem;
+        font-size: 0.79rem;
+        font-weight: 600;
+        text-decoration: underline;
       }
 
       .stack {
@@ -790,6 +809,17 @@
             Toggle Help: On
           </button>
           <button id="saveCodeBtn" class="neutral">Save Code</button>
+          <div class="control-field">
+            <label for="editorThemeSelect">Editor Theme</label>
+            <select id="editorThemeSelect" class="control-select">
+              <option value="moz-light" selected>moz-light</option>
+              <option value="light">light</option>
+              <option value="dark">dark</option>
+              <option value="monokai">monokai</option>
+              <option value="moz-dark">moz-dark</option>
+              <option value="sonnenzimmer">sonnenzimmer</option>
+            </select>
+          </div>
         </div>
 
         <div class="workspace-stack">
@@ -935,6 +965,7 @@
       const runStepBtn = document.getElementById("runStepBtn");
       const runAllBtn = document.getElementById("runAllBtn");
       const saveCodeBtn = document.getElementById("saveCodeBtn");
+      const editorThemeSelect = document.getElementById("editorThemeSelect");
       const stepLinesEl = document.getElementById("stepLines");
       const loadExampleButtons = document.querySelectorAll(".load-example-btn");
       const consoleViewBtn = document.getElementById("consoleViewBtn");
@@ -959,6 +990,7 @@
       let codeInfoTooltipEl = null;
       let removeCodeInfoTooltipListeners = null;
       let helpTooltipsEnabled = true;
+      const defaultEditorTheme = "moz-light";
       const runtimeConsoleMarker = Symbol("runtimeConsoleMarker");
       const builtinLibraryCatalog = [
         {
@@ -1382,7 +1414,7 @@ barOmf.style.padding = "2px 4px"`,
         const lineLabel = Number.isFinite(info.line) ? `Line ${info.line}` : "Line ?";
         let descriptionHtml = hasNfo ? toHtmlFromField(info.nfo.description) : "";
         const appliesTo = hasNfo ? toTextFromField(info.nfo.elements) : "";
-        const urls = hasNfo ? extractEduUrls(info.nfo) : [];
+        const learnMoreUrl = hasNfo ? extractEduUrls(info.nfo)[0] || "" : "";
 
         if (!descriptionHtml && hasVariableDeclaration(token)) {
           descriptionHtml = escapeHtml(getVariableHelpText(token));
@@ -1433,20 +1465,14 @@ barOmf.style.padding = "2px 4px"`,
           tooltip.appendChild(appliesMeta);
         }
 
-        if (urls.length > 0) {
-          const links = document.createElement("ul");
-          links.className = "edu-links";
-          urls.slice(0, 3).forEach((url) => {
-            const item = document.createElement("li");
-            const anchor = document.createElement("a");
-            anchor.href = url;
-            anchor.target = "_blank";
-            anchor.rel = "noopener noreferrer";
-            anchor.textContent = url;
-            item.appendChild(anchor);
-            links.appendChild(item);
-          });
-          tooltip.appendChild(links);
+        if (learnMoreUrl) {
+          const learnMoreLink = document.createElement("a");
+          learnMoreLink.className = "edu-learn-more";
+          learnMoreLink.href = learnMoreUrl;
+          learnMoreLink.target = "_blank";
+          learnMoreLink.rel = "noopener noreferrer";
+          learnMoreLink.textContent = "Learn More";
+          tooltip.appendChild(learnMoreLink);
         }
 
         document.body.appendChild(tooltip);
@@ -1490,7 +1516,7 @@ barOmf.style.padding = "2px 4px"`,
         netitor = new Netitor({
           ele: "#codeInput",
           language: "javascript",
-          theme: "light",
+          theme: defaultEditorTheme,
           lint: false,
           hint: true,
           wrap: false,
@@ -1504,6 +1530,10 @@ barOmf.style.padding = "2px 4px"`,
         netitor.on("edu-info", (info, eventObj) => {
           showCodeInfoTooltip(info, eventObj);
         });
+
+        if (editorThemeSelect) {
+          editorThemeSelect.value = defaultEditorTheme;
+        }
       }
 
       function getEditorCode() {
@@ -2809,6 +2839,12 @@ ${safeCode}
       });
       saveCodeBtn.addEventListener("click", () => {
         saveCodeAsHtml();
+      });
+      editorThemeSelect?.addEventListener("change", () => {
+        if (!netitor) {
+          return;
+        }
+        netitor.theme = editorThemeSelect.value;
       });
       consoleViewBtn.addEventListener("click", () => {
         setOutputView("console");
