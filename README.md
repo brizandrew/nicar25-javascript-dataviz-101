@@ -6,6 +6,9 @@ This is a foundations class for journalists who are new to JavaScript or just ne
 
 Attendees should bring a laptop (no tablets).
 
+# Live Preview
+[Click here](https://htmlpreview.github.io/?https://github.com/brizandrew/nicar25-javascript-dataviz-101/blob/main/console/index.html) for a live preview.
+
 # Using This Repo
 
 You can run this lesson without any build step or local dev server.
